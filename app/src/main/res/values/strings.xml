@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">AquaMagna</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="home_fragment">Home Fragment</string>
+    <string name="profile_fragment">Profile fragment</string>
+    <string name="scan_fragment">Scan fragment</string>
+</resources>
