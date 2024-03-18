@@ -18,6 +18,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 @SuppressLint("MissingPermission")
 public class BLEReceiveManager {
@@ -26,19 +28,24 @@ public class BLEReceiveManager {
     private static final UUID CHARACTERISTIC_UUID = UUID.fromString("beb5483e-36e1-4688-b7f5-ea07361b26a8");
     private static final UUID CCCD_DESCRIPTOR_UUID = UUID.fromString("00002902-0000-1000-8000-00805F9B34FB");
     private Handler handler = new Handler(Looper.getMainLooper());
-    private Runnable disconnectRunnable = new Runnable() {
-        @Override
-        public void run() {
-            disconnectFromDevice();
-        }
-    };
-
     private final BluetoothAdapter bluetoothAdapter;
     private final Context context;
+    private BLECallbacks bleCallbacks;
     private final Activity activity;
     private BluetoothGatt bluetoothGatt;
     private ProgressDialog progressDialog;
-
+    private Runnable disconnectRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (bluetoothGatt != null){
+                bluetoothGatt.disconnect();
+                bluetoothGatt.close();
+                bluetoothGatt = null;
+                Toast.makeText(context, "Connection closed!", Toast.LENGTH_SHORT).show();
+                stopScanning();
+            }
+        }
+    };
     private ScanCallback scanCallback = new ScanCallback() {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
@@ -48,7 +55,6 @@ public class BLEReceiveManager {
             }
         }
     };
-
     private BluetoothGattCallback gattCallback = new BluetoothGattCallback() {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
@@ -56,10 +62,9 @@ public class BLEReceiveManager {
                 updateProgress("Discovering services...");
                 gatt.discoverServices();
             } else if (newState == BluetoothGatt.STATE_DISCONNECTED) {
-
+                handler.removeCallbacksAndMessages(null);
             }
         }
-
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
@@ -81,23 +86,32 @@ public class BLEReceiveManager {
                 }
             }
         }
-
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
             // Handle characteristic changes here
-            byte[] value = characteristic.getValue();
+            String message = characteristic.getStringValue(0);
+            if (message != null && !message.isEmpty()) {
+                String[] parts = message.split(" ");
+                List<Float> parameters = new ArrayList<>();
+                for (String part : parts) {
+                    parameters.add(Float.parseFloat(part));
+                }
+                if (parameters.size() >= 3) {
+                    DeviceSensors deviceSensors = new DeviceSensors(parameters.get(0), parameters.get(1), parameters.get(2));
+                    bleCallbacks.onDataFlow(deviceSensors, activity);
+                }
+            }
             activity.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
                     progressDialog.hide();
-                    Toast.makeText(context, value.toString(), Toast.LENGTH_SHORT).show();
                 }
             });
 
         }
     };
 
-    public BLEReceiveManager(Context context, Activity activity) {
+    public BLEReceiveManager(Context context, Activity activity, BLECallbacks callbacks) {
         this.context = context;
         this.activity = activity;
         BluetoothManager bluetoothManager = (BluetoothManager) context.getSystemService(Context.BLUETOOTH_SERVICE);
@@ -109,18 +123,22 @@ public class BLEReceiveManager {
         this.progressDialog = new ProgressDialog(activity);
         this.progressDialog.setMessage("Connecting to device...");
         this.progressDialog.setCancelable(false);
+        this.bleCallbacks = callbacks;
     }
 
     public void startScanning() {
         if (bluetoothAdapter != null) {
             progressDialog.show();
+            bleCallbacks.onScanStarted(activity);
             bluetoothAdapter.getBluetoothLeScanner().startScan(scanCallback);
+
         }
     }
 
     public void stopScanning() {
         if (bluetoothAdapter != null) {
             progressDialog.dismiss();
+            bleCallbacks.onScanStopped(activity);
             bluetoothAdapter.getBluetoothLeScanner().stopScan(scanCallback);
         }
     }
@@ -133,11 +151,6 @@ public class BLEReceiveManager {
         handler.postDelayed(disconnectRunnable, 10000);
     }
 
-    private void disconnectFromDevice(){
-        if (bluetoothGatt != null)
-            bluetoothGatt.disconnect();
-    }
-
     private void updateProgress(String message) {
         activity.runOnUiThread(new Runnable() {
             @Override
@@ -145,5 +158,11 @@ public class BLEReceiveManager {
                 progressDialog.setMessage(message);
             }
         });
+    }
+
+    public interface BLECallbacks{
+        void onScanStarted(Activity activity);
+        void onScanStopped(Activity activity);
+        void onDataFlow(DeviceSensors deviceSensors, Activity activity);
     }
 }
