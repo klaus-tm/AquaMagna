@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "264908388565",
+    "project_id": "aquamagna-77b9d",
+    "storage_bucket": "aquamagna-77b9d.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:264908388565:android:c88383e26afd309e8f4a5c",
+        "android_client_info": {
+          "package_name": "com.example.aquamagna"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBpJGJlGdo220vGw0GqktMvohsdi6NpJQo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
