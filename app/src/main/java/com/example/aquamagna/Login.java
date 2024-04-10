@@ -20,6 +20,11 @@ import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 public class Login extends AppCompatActivity {
 
@@ -29,16 +34,14 @@ public class Login extends AppCompatActivity {
     private Button signIn;
     private Button signUp;
     private FirebaseAuth mAuth;
+    DatabaseReference databaseReference;
 
     @Override
     protected void onStart() {
         super.onStart();
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser != null){
-            Toast.makeText(this, "Welcome!", Toast.LENGTH_SHORT).show();
-            Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-            startActivity(intent);
-            finish();
+            searchUserInDatabase(currentUser.getUid(), getWindow().getDecorView().findViewById(android.R.id.content));
         }
     }
 
@@ -79,6 +82,7 @@ public class Login extends AppCompatActivity {
             public void onClick(View view) {
                 Intent intent = new Intent(Login.this, Register.class);
                 startActivity(intent);
+                finish();
             }
         });
         signIn.setOnClickListener(new View.OnClickListener() {
@@ -95,23 +99,45 @@ public class Login extends AppCompatActivity {
 
                 String email = emailEditText.getText().toString();
                 String password = passwordEditText.getText().toString();
-                mAuth.signInWithEmailAndPassword(email, password)
-                        .addOnCompleteListener(new OnCompleteListener<AuthResult>() {
-                            @Override
-                            public void onComplete(@NonNull Task<AuthResult> task) {
-                                if (task.isSuccessful()) {
-                                    // Sign in success, update UI with the signed-in user's information
+                searchUserInAuth(email, password, view);
+            }
+        });
+    }
 
-                                    Toast.makeText(Login.this, "Welcome!", Toast.LENGTH_SHORT).show();
-                                    Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-                                    startActivity(intent);
-                                    finish();
-                                } else {
-                                    // If sign in fails, display a message to the user.
-                                    Snackbar.make(view, "There has been a problem!", Snackbar.LENGTH_SHORT).show();
-                                }
-                            }
-                        });
+    private void searchUserInAuth(String email, String password, View view) {
+        mAuth.signInWithEmailAndPassword(email, password)
+                .addOnCompleteListener(new OnCompleteListener<AuthResult>() {
+                    @Override
+                    public void onComplete(@NonNull Task<AuthResult> task) {
+                        if (task.isSuccessful()) {
+                            // Sign in success, update UI with the signed-in user's information
+                            FirebaseUser user = mAuth.getCurrentUser();
+                            searchUserInDatabase(user.getUid(), view);
+                        } else {
+                            // If sign in fails, display a message to the user.
+                            Snackbar.make(view, "There has been a problem!", Snackbar.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+    }
+
+    private void searchUserInDatabase(String uid, View view) {
+        databaseReference = FirebaseDatabase.getInstance("https://aquamagna-77b9d-default-rtdb.europe-west1.firebasedatabase.app/").getReference("users").child(uid);
+        databaseReference.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                User user = snapshot.getValue(User.class);
+                if (user != null){
+                    Toast.makeText(Login.this, "Welcome " + user.getName() + "!", Toast.LENGTH_SHORT).show();
+                    Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+                    startActivity(intent);
+                    finish();
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Snackbar.make(view, "There has been a problem!", Snackbar.LENGTH_SHORT).show();
             }
         });
     }
