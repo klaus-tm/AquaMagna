@@ -1,26 +1,40 @@
 package com.example.aquamagna;
 
+import static android.content.res.Configuration.UI_MODE_NIGHT_YES;
+
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
+import android.media.VolumeShaper;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.cardview.widget.CardView;
+import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.snackbar.Snackbar;
+
 @SuppressLint("SetTextI18n")
 public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallbacks{
     private final boolean isShowBluetoothDialogCalled = false;
+    private boolean scanStarted = false;
     private Button startScan;
     private TextView mainText;
     private TextView phText;
@@ -29,6 +43,7 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
     private TextView messageText;
     private Button newScan;
     private Button saveScan;
+    private LinearLayout buttons;
     private BluetoothAdapter bluetoothAdapter;
     private boolean isBluetoothSupported = false;
     private boolean arePermissionsGranted = false;
@@ -62,6 +77,10 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
         }
         updateStartScanButtonVisibility();
     });
+    private boolean isDark(Context context){
+        int currentMode = context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+        return currentMode == UI_MODE_NIGHT_YES;
+    }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -72,6 +91,7 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
         turbidityText = view.findViewById(R.id.TurbidityText);
         conductivityText = view.findViewById(R.id.ConductivityText);
         messageText = view.findViewById(R.id.typeText);
+        buttons = view.findViewById(R.id.buttons);
         saveScan = view.findViewById(R.id.saveScan);
         newScan = view.findViewById(R.id.newScan);
 
@@ -89,6 +109,7 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
             @Override
             public void onClick(View view) {
                 bleReceiveManager.startScanning();
+                scanStarted = true;
             }
         });
 
@@ -104,16 +125,18 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
     @Override
     public void onResume() {
         super.onResume();
-        // Check for permissions update here
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S){
-            if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED)
-                arePermissionsGranted = true;
+        if(!scanStarted){
+            // Check for permissions update here
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S){
+                if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED)
+                    arePermissionsGranted = true;
+            }
+            else {
+                if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_ADMIN) == PackageManager.PERMISSION_GRANTED)
+                    arePermissionsGranted = true;
+            }
+            updateStartScanButtonVisibility();
         }
-        else {
-            if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_ADMIN) == PackageManager.PERMISSION_GRANTED)
-                arePermissionsGranted = true;
-        }
-        updateStartScanButtonVisibility();
     }
 
     public void showBluetoothDialog() {
@@ -147,8 +170,7 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
                 mainText.setText("");
                 messageText.setText("");
                 messageText.setVisibility(View.GONE);
-                newScan.setVisibility(View.GONE);
-                saveScan.setVisibility(View.GONE);
+                buttons.setVisibility(View.GONE);
                 startScan.setVisibility(View.GONE);
                 phText.setVisibility(View.VISIBLE);
                 turbidityText.setVisibility(View.VISIBLE);
@@ -168,8 +190,7 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                newScan.setVisibility(View.VISIBLE);
-                saveScan.setVisibility(View.VISIBLE);
+                buttons.setVisibility(View.VISIBLE);
                 messageText.setVisibility(View.VISIBLE);
             }
         });
@@ -191,46 +212,58 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
                 float conductivityThreshold = 800.0f;
 
                 // Check if the values are far from the standards
-                if (Math.abs(deviceSensors.getPh() - phThreshold) > 1.0f || Math.abs(deviceSensors.getTurbidity() - turbidityThreshold) > 10.0f || Math.abs(deviceSensors.getConductivity() - conductivityThreshold) > 100.0f) {
+                if (Math.abs(phThreshold - deviceSensors.getPh()) > 1.5f || Math.abs(deviceSensors.getTurbidity() - turbidityThreshold) > 10.0f || Math.abs(deviceSensors.getConductivity() - conductivityThreshold) > 100.0f) {
                     // Values are far from the standards, set background color to dark red
-                    messageText.setText("Don't drink it! :(");
-                    messageText.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
-                    phText.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
-                    ((TextView) getView().findViewById(R.id.PhStandard)).setTextColor(getResources().getColor(android.R.color.holo_red_dark));
-                    turbidityText.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
-                    ((TextView)getView().findViewById(R.id.TurbidityStandard)).setTextColor(getResources().getColor(android.R.color.holo_red_dark));
-                    conductivityText.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
-                    ((TextView)getView().findViewById(R.id.ConductivityStandard)).setTextColor(getResources().getColor(android.R.color.holo_red_dark));
-                    saveScan.setBackgroundColor(getResources().getColor(android.R.color.holo_red_dark));
-                    newScan.setBackgroundColor(getResources().getColor(android.R.color.holo_red_dark));
-
-                } else if (Math.abs(deviceSensors.getPh() - phThreshold) <= 0.5f && Math.abs(deviceSensors.getTurbidity() - turbidityThreshold) <= 5.0f && Math.abs(deviceSensors.getConductivity() - conductivityThreshold) <= 50.0f) {
+                    if (isDark(getContext())){
+                        setButtons(R.color.md_theme_dark_error, R.color.md_theme_dark_onError);
+                        setText("Don't drink it! :(", R.color.md_theme_dark_onErrorContainer, R.color.md_theme_dark_errorContainer);
+                    } else {
+                        setButtons(R.color.md_theme_light_error, R.color.md_theme_light_onError);
+                        setText("Don't drink it! :(", R.color.md_theme_light_onErrorContainer, R.color.md_theme_light_errorContainer);
+                    }
+                } else if (Math.abs(deviceSensors.getPh() - phThreshold) <= 0.1f && Math.abs(deviceSensors.getTurbidity() - turbidityThreshold) <= 5.0f && Math.abs(deviceSensors.getConductivity() - conductivityThreshold) <= 50.0f) {
                     // Values are close to the standards, set background color to green
-                    messageText.setText("Everything looks good! :)");
-                    messageText.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
-                    phText.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
-                    ((TextView) getView().findViewById(R.id.PhStandard)).setTextColor(getResources().getColor(android.R.color.holo_green_dark));
-                    turbidityText.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
-                    ((TextView)getView().findViewById(R.id.TurbidityStandard)).setTextColor(getResources().getColor(android.R.color.holo_green_dark));
-                    conductivityText.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
-                    ((TextView)getView().findViewById(R.id.ConductivityStandard)).setTextColor(getResources().getColor(android.R.color.holo_green_dark));
-                    saveScan.setBackgroundColor(getResources().getColor(android.R.color.holo_green_dark));
-                    newScan.setBackgroundColor(getResources().getColor(android.R.color.holo_green_dark));
-
+                    if (isDark(getContext())){
+                        setButtons(R.color.md_theme_dark_primary, R.color.md_theme_dark_onPrimary);
+                        setText("Everything looks good! :)", R.color.md_theme_dark_onSurface, R.color.md_theme_dark_surface);
+                    } else {
+                        setButtons(R.color.md_theme_light_primary, R.color.md_theme_light_onPrimary);
+                        setText("Everything looks good! :)", R.color.md_theme_light_onSurface, R.color.md_theme_light_surface);
+                    }
                 } else {
                     // Values are not far from the standards, set the text color to orange
-                    messageText.setText("Try to filtrate it before consuming! :/");
-                    messageText.setTextColor(getResources().getColor(android.R.color.holo_orange_dark));
-                    phText.setTextColor(getResources().getColor(android.R.color.holo_orange_dark));
-                    ((TextView) getView().findViewById(R.id.PhStandard)).setTextColor(getResources().getColor(android.R.color.holo_orange_dark));
-                    turbidityText.setTextColor(getResources().getColor(android.R.color.holo_orange_dark));
-                    ((TextView)getView().findViewById(R.id.TurbidityStandard)).setTextColor(getResources().getColor(android.R.color.holo_orange_dark));
-                    conductivityText.setTextColor(getResources().getColor(android.R.color.holo_orange_dark));
-                    ((TextView)getView().findViewById(R.id.ConductivityStandard)).setTextColor(getResources().getColor(android.R.color.holo_orange_dark));
-                    saveScan.setBackgroundColor(getResources().getColor(android.R.color.holo_orange_dark));
-                    newScan.setBackgroundColor(getResources().getColor(android.R.color.holo_orange_dark));
+                    if (isDark(getContext())){
+                        setButtons(R.color.md_theme_dark_tertiary, R.color.md_theme_dark_onTertiary);
+                        setText("Try to filtrate it before consuming! :/", R.color.md_theme_dark_onTertiaryContainer, R.color.md_theme_dark_tertiaryContainer);
+                    } else {
+                        setButtons(R.color.md_theme_light_tertiary, R.color.md_theme_light_onTertiary);
+                        setText("Try to filtrate it before consuming! :/", R.color.md_theme_light_onTertiaryContainer, R.color.md_theme_light_tertiaryContainer);
+                    }
                 }
             }
         });
+    }
+
+    @Override
+    public void showSnackbar() {
+        Snackbar.make((CoordinatorLayout)getActivity().findViewById(R.id.coordinator), "Connection closed!", Snackbar.LENGTH_SHORT).setAnchorView((BottomNavigationView)getActivity().findViewById(R.id.bottomNavView)).show();
+    }
+
+    private void setButtons(int colorButton, int colorText) {
+        saveScan.setBackgroundColor(getResources().getColor(colorButton));
+        saveScan.setTextColor(getResources().getColor(colorText));
+        newScan.setTextColor(getResources().getColor(colorButton));
+    }
+
+    private void setText(String message, int colorText, int colorContainer) {
+        messageText.setText(message);
+        messageText.setTextColor(getResources().getColor(colorText));
+        phText.setTextColor(getResources().getColor(colorText));
+        ((TextView) getView().findViewById(R.id.PhStandard)).setTextColor(getResources().getColor(colorText));
+        turbidityText.setTextColor(getResources().getColor(colorText));
+        ((TextView)getView().findViewById(R.id.TurbidityStandard)).setTextColor(getResources().getColor(colorText));
+        conductivityText.setTextColor(getResources().getColor(colorText));
+        ((TextView)getView().findViewById(R.id.ConductivityStandard)).setTextColor(getResources().getColor(colorText));
+        ((MaterialCardView)getView().findViewById(R.id.card)).setCardBackgroundColor(getResources().getColor(colorContainer));
     }
 }

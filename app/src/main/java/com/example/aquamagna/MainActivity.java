@@ -2,34 +2,41 @@ package com.example.aquamagna;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
+import android.content.Intent;
+import android.content.res.Configuration;
+import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.widget.FrameLayout;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.google.android.material.color.DynamicColors;
+import com.google.android.material.elevation.SurfaceColors;
+import com.google.firebase.auth.FirebaseAuth;
 
 public class MainActivity extends AppCompatActivity {
-
-    private BottomNavigationView bottomNavigationView;
-    private FrameLayout frameLayout;
-
-    private boolean isShowBluetoothDialogCalled = false;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
        setContentView(R.layout.activity_main);
 
-       DynamicColors.applyToActivitiesIfAvailable(this.getApplication());
+        FirebaseAuth auth = FirebaseAuth.getInstance();
+        if (auth.getCurrentUser() == null){
+            Intent intent = new Intent(getApplicationContext(), Login.class);
+            startActivity(intent);
+            finish();
+        }
+       
+       getWindow().setNavigationBarColor(SurfaceColors.SURFACE_2.getColor(this));
 
-       bottomNavigationView = findViewById(R.id.bottomNavView);
-       frameLayout = findViewById(R.id.frameLayout);
+        BottomNavigationView bottomNavigationView = findViewById(R.id.bottomNavView);
+        FrameLayout frameLayout = findViewById(R.id.frameLayout);
 
        bottomNavigationView.setOnNavigationItemSelectedListener(new BottomNavigationView.OnNavigationItemSelectedListener() {
            @Override
@@ -64,18 +71,5 @@ public class MainActivity extends AppCompatActivity {
         else
             fragmentTransaction.replace(R.id.frameLayout, fragment);
         fragmentTransaction.commit();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.frameLayout);
-        if (fragment instanceof ScanFragment){
-
-        } else if (fragment instanceof HomeFragment) {
-            loadFragment(new HomeFragment(), false);
-        } else {
-            loadFragment(new ProfileFragment(), false);
-        }
     }
 }

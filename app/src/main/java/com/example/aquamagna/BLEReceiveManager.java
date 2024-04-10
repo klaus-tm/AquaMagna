@@ -16,7 +16,8 @@ import android.bluetooth.le.ScanResult;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
-import android.widget.Toast;
+
+import com.google.android.material.snackbar.Snackbar;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,7 +42,7 @@ public class BLEReceiveManager {
                 bluetoothGatt.disconnect();
                 bluetoothGatt.close();
                 bluetoothGatt = null;
-                Toast.makeText(context, "Connection closed!", Toast.LENGTH_SHORT).show();
+                bleCallbacks.showSnackbar();
                 stopScanning();
             }
         }
@@ -164,5 +165,6 @@ public class BLEReceiveManager {
         void onScanStarted(Activity activity);
         void onScanStopped(Activity activity);
         void onDataFlow(DeviceSensors deviceSensors, Activity activity);
+        void showSnackbar();
     }
 }
