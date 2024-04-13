@@ -1,4 +1,4 @@
-package com.example.aquamagna;
+package com.example.aquamagna.dataClasses;
 
 public class DeviceSensors {
     private Float Ph;

@@ -12,6 +12,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
+import com.example.aquamagna.dataClasses.User;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.snackbar.Snackbar;
@@ -25,8 +26,6 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
-
-import java.util.Date;
 
 public class Register extends AppCompatActivity {
     private TextInputEditText emailEditText;
@@ -132,7 +131,7 @@ public class Register extends AppCompatActivity {
         database = FirebaseDatabase.getInstance("https://aquamagna-77b9d-default-rtdb.europe-west1.firebasedatabase.app/");
         databaseReference = database.getReference("users");
         DatabaseReference userRef = databaseReference.child(uid);
-        User newUser = new User(name, email, "", "", null);
+        User newUser = new User(name, email, "", "");
         userRef.setValue(newUser)
                 .addOnCompleteListener(new OnCompleteListener<Void>() {
                     @Override

@@ -7,20 +7,23 @@ import androidx.annotation.NonNull;
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.fragment.app.Fragment;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.RadioGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import com.example.aquamagna.dataClasses.Company;
+import com.example.aquamagna.dataClasses.User;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.google.android.material.datepicker.MaterialDatePicker;
-import com.google.android.material.datepicker.MaterialPickerOnPositiveButtonClickListener;
 import com.google.android.material.snackbar.Snackbar;
+import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -28,18 +31,17 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
-import java.text.DateFormat;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ProfileFragment extends Fragment {
     private static final String DATABASE_URL = "https://aquamagna-77b9d-default-rtdb.europe-west1.firebasedatabase.app/";
     private Button signOut, save, delete;
-    private TextInputEditText name, email, phone, birth;
+    private TextInputEditText name, email, phone;
+    private TextInputLayout company;
     private TextView message;
-    private RadioGroup gender;
     private FirebaseAuth auth;
     private DatabaseReference databaseReference;
-    boolean isMale = false;
-    private MaterialDatePicker<Long> datePicker = MaterialDatePicker.Builder.datePicker().setTitleText("Select birth date").build();
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -49,8 +51,7 @@ public class ProfileFragment extends Fragment {
         name = view.findViewById(R.id.nameTextProfile);
         email = view.findViewById(R.id.emailTextProfile);
         phone = view.findViewById(R.id.phoneTextProfile);
-        birth = view.findViewById(R.id.birthTextProfile);
-        gender = view.findViewById(R.id.genderRadio);
+        company = view.findViewById(R.id.companyTextProfile);
 
         signOut = view.findViewById(R.id.signOut);
         save = view.findViewById(R.id.saveDetails);
@@ -58,36 +59,13 @@ public class ProfileFragment extends Fragment {
         auth = FirebaseAuth.getInstance();
 
         setInfo(auth.getCurrentUser().getUid(), view);
+        populateCompanyNames();
 
-        birth.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                datePicker.show(getActivity().getSupportFragmentManager(), "DATE_PICKER");
-            }
-        });
-
-        datePicker.addOnPositiveButtonClickListener(new MaterialPickerOnPositiveButtonClickListener<Long>() {
-            @Override
-            public void onPositiveButtonClick(Long selection) {
-                String date = DateFormat.getDateInstance(DateFormat.MEDIUM).format(selection);
-                birth.setText(date);
-            }
-        });
-
-        gender.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(RadioGroup radioGroup, int i) {
-                if(i == R.id.maleRadio) {
-                    isMale = true;
-                } else if(i == R.id.femaleRadio) {
-                    isMale = false;
-                }
-            }
-        });
         signOut.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 auth.signOut();
+                Toast.makeText(getContext(), "See you next time!", Toast.LENGTH_SHORT).show();
                 Intent intent = new Intent(getContext(), Login.class);
                 startActivity(intent);
                 getActivity().finish();
@@ -98,7 +76,7 @@ public class ProfileFragment extends Fragment {
             public void onClick(View view) {
                 databaseReference = FirebaseDatabase.getInstance(DATABASE_URL).getReference("users").child(auth.getCurrentUser().getUid());
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                    User newUser = new User(name.getText().toString(), email.getText().toString(), phone.getText().toString(), birth.getText().toString(), isMale);
+                    User newUser = new User(name.getText().toString(), email.getText().toString(), phone.getText().toString(),company.getEditText().getText().toString());
                     databaseReference.setValue(newUser)
                             .addOnCompleteListener(new OnCompleteListener<Void>() {
                                 @Override
@@ -114,11 +92,63 @@ public class ProfileFragment extends Fragment {
         delete.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
+                deleteUserFromDatabase(view);
             }
         });
 
         return view;
+    }
+
+    private void populateCompanyNames(){
+        databaseReference = FirebaseDatabase.getInstance(DATABASE_URL).getReference("companies");
+        databaseReference.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                List<String> companyNames = new ArrayList<>();
+                for (DataSnapshot dataSnapshot : snapshot.getChildren()) {
+                    Company company = dataSnapshot.getValue(Company.class);
+                    if (company != null) {
+                        companyNames.add(company.getName());
+                    }
+                }
+                String[] companyNameArray = companyNames.toArray(new String[0]);
+                ((MaterialAutoCompleteTextView) company.getEditText()).setSimpleItems(companyNameArray);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                // Handle database error
+            }
+        });
+    }
+
+    private void deleteUserFromAuth(View view) {
+        if (auth.getCurrentUser().getUid() != null){
+            auth.getCurrentUser().delete()
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful()){
+                            Toast.makeText(getContext(), "Goodbye!", Toast.LENGTH_SHORT).show();
+                            Intent intent = new Intent(getContext(), Login.class);
+                            startActivity(intent);
+                            getActivity().finish();
+                        }
+                        else{
+                            Snackbar.make(view, "Auth error!", Snackbar.LENGTH_SHORT).show();
+                            Log.e("AUTH ERROR", String.valueOf(task.getException()));
+                        }
+                    });
+        }
+    }
+
+    private void deleteUserFromDatabase(View view) {
+        databaseReference = FirebaseDatabase.getInstance(DATABASE_URL).getReference("users").child(auth.getCurrentUser().getUid());
+        databaseReference.removeValue()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful())
+                        deleteUserFromAuth(view);
+                    else
+                        Snackbar.make(view, "Database error!", Snackbar.LENGTH_SHORT).show();
+                });
     }
 
     private void setInfo(String uid, View view) {
@@ -132,13 +162,7 @@ public class ProfileFragment extends Fragment {
                     name.setText(user.getName());
                     email.setText(user.getEmail());
                     phone.setText(user.getPhone());
-                    if (user.getBirth() != null)
-                        birth.setText(user.getBirth().toString());
-                    if (user.getMale() != null) {
-                        if (user.getMale())
-                            gender.check(R.id.maleRadio);
-                        else gender.check(R.id.femaleRadio);
-                    }
+                    company.getEditText().setText(user.getCompany());
                 }
             }
 

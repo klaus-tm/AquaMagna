@@ -17,7 +17,7 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 
-import com.google.android.material.snackbar.Snackbar;
+import com.example.aquamagna.dataClasses.DeviceSensors;
 
 import java.util.ArrayList;
 import java.util.List;

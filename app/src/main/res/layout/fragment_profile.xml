@@ -52,7 +52,9 @@
             android:layout_height="wrap_content"
             android:hint="Phone number"
             app:startIconDrawable="@drawable/call"
-            android:layout_marginTop="30dp">
+            android:layout_marginTop="30dp"
+            app:counterEnabled="true"
+            app:counterMaxLength="12">
             <com.google.android.material.textfield.TextInputEditText
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -61,64 +63,18 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/companyTextProfile"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Birth date"
-            app:startIconDrawable="@drawable/calendar"
-            android:layout_marginTop="30dp">
-            <com.google.android.material.textfield.TextInputEditText
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:id="@+id/birthTextProfile"
-                android:inputType="date"
-                android:focusable="false"/>
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:hint="Company"
+            app:startIconDrawable="@drawable/company"
             android:layout_marginTop="30dp"
-            app:cardCornerRadius="5dp"
-            app:strokeWidth="1dp">
-
-            <LinearLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:paddingStart="7dp"
-                android:paddingEnd="7dp"
-                android:paddingTop="7dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Gender"
-                    android:textSize="17sp"
-                    android:paddingStart="5dp"/>
-
-                <RadioGroup
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:id="@+id/genderRadio">
-
-                    <RadioButton
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Male"
-                        android:id="@+id/maleRadio"/>
-
-                    <RadioButton
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Female"
-                        android:id="@+id/femaleRadio"/>
-                </RadioGroup>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+                android:inputType="none"/>
+        </com.google.android.material.textfield.TextInputLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
