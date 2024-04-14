@@ -10,6 +10,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -18,17 +21,34 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import com.example.aquamagna.dataClasses.DeviceSensors;
+import com.example.aquamagna.dataClasses.ScanData;
+import com.example.aquamagna.dataClasses.User;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.snackbar.Snackbar;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 @SuppressLint("SetTextI18n")
 public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallbacks{
@@ -44,6 +64,12 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
     private Button saveScan;
     private LinearLayout buttons;
     private BluetoothAdapter bluetoothAdapter;
+    private FirebaseAuth auth;
+    private DatabaseReference databaseReference;
+    private DatabaseReference userReference;
+    private static final String DATABASE_URL = "https://aquamagna-77b9d-default-rtdb.europe-west1.firebasedatabase.app/";
+
+    private String locationString = "";
     private boolean isBluetoothSupported = false;
     private boolean arePermissionsGranted = false;
     private boolean isBluetoothEnabled = false;
@@ -93,6 +119,7 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
         buttons = view.findViewById(R.id.buttons);
         saveScan = view.findViewById(R.id.saveScan);
         newScan = view.findViewById(R.id.newScan);
+        auth = FirebaseAuth.getInstance();
 
         mainText.setText("");
         startScan.setVisibility(View.GONE);
@@ -118,8 +145,80 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
                 bleReceiveManager.startScanning();
             }
         });
+
+        saveScan.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                getLocationForScan(view);
+            }
+        });
         return view;
     }
+
+    private void getLocationForScan(View view) {
+        LocationManager locationManager = (LocationManager) requireContext().getSystemService(Context.LOCATION_SERVICE);
+        LocationListener locationListener = new LocationListener() {
+            @Override
+            public void onLocationChanged(@NonNull Location location) {
+                double latitude = location.getLatitude();
+                double longitude = location.getLongitude();
+                locationString = "latitude: " + latitude + ", longitude: " + longitude;
+                getCompanyFromUser(view);
+                locationManager.removeUpdates(this);
+            }
+        };
+        if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // Permission is not granted, request it
+            ActivityCompat.requestPermissions(requireActivity(), new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
+        } else {
+            // Permission is granted, request location updates
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+        }
+    }
+
+    private void getCompanyFromUser(View view) {
+        String company = "";
+        userReference = FirebaseDatabase.getInstance(DATABASE_URL).getReference("users").child(auth.getUid());
+        userReference.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                User user = snapshot.getValue(User.class);
+                if (user != null) {
+                    company.concat(user.getCompany());
+                    saveScanToDatabase(view, company);
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Snackbar.make(view, "Unable to get company!", Snackbar.LENGTH_SHORT).setAnchorView((BottomNavigationView)getActivity().findViewById(R.id.bottomNavView)).show();
+            }
+        });
+    }
+
+    private void saveScanToDatabase(View view, String company) {
+        String[] ph = phText.getText().toString().split(":");
+        String[] turbidity = turbidityText.getText().toString().split(":");
+        String[] conductivity = conductivityText.getText().toString().split(":");
+        databaseReference = FirebaseDatabase.getInstance(DATABASE_URL).getReference("scans");
+        String saveId = databaseReference.push().getKey();
+        if (saveId != null){
+            Date today = new Date();
+            SimpleDateFormat dateFormat = new SimpleDateFormat("d MMM yyyy, HH:mm:ss", Locale.getDefault());
+            databaseReference.child(saveId)
+                    .setValue(new ScanData(saveId, dateFormat.format(today), locationString, auth.getCurrentUser().getUid(), company, ph[1].trim(), turbidity[1].trim(), conductivity[1].trim()))
+                    .addOnCompleteListener(new OnCompleteListener<Void>() {
+                        @Override
+                        public void onComplete(@NonNull Task<Void> task) {
+                            if (task.isSuccessful())
+                                Snackbar.make(view, "Scan saved successfully!", Snackbar.LENGTH_SHORT).setAnchorView((BottomNavigationView)getActivity().findViewById(R.id.bottomNavView)).show();
+                            else Snackbar.make(view, "A problem occured while saving the scan!", Snackbar.LENGTH_SHORT).setAnchorView((BottomNavigationView)getActivity().findViewById(R.id.bottomNavView)).show();
+                        }
+                    });
+        }
+    }
+
 
     @Override
     public void onResume() {
@@ -245,7 +344,7 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
 
     @Override
     public void showSnackbar() {
-        Snackbar.make((CoordinatorLayout)getActivity().findViewById(R.id.coordinator), "Connection closed!", Snackbar.LENGTH_SHORT).setAnchorView((BottomNavigationView)getActivity().findViewById(R.id.bottomNavView)).show();
+        Snackbar.make((CoordinatorLayout)getActivity().findViewById(R.id.coordinator), "Scan finished successfully!", Snackbar.LENGTH_SHORT).setAnchorView((BottomNavigationView)getActivity().findViewById(R.id.bottomNavView)).show();
     }
 
     private void setButtons(int colorButton, int colorText) {
