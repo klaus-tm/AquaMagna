@@ -38,6 +38,7 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
@@ -63,6 +64,7 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
     private Button newScan;
     private Button saveScan;
     private LinearLayout buttons;
+    private LinearProgressIndicator loadingSave;
     private BluetoothAdapter bluetoothAdapter;
     private FirebaseAuth auth;
     private DatabaseReference databaseReference;
@@ -119,6 +121,7 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
         buttons = view.findViewById(R.id.buttons);
         saveScan = view.findViewById(R.id.saveScan);
         newScan = view.findViewById(R.id.newScan);
+        loadingSave = view.findViewById(R.id.loadingSave);
         auth = FirebaseAuth.getInstance();
 
         mainText.setText("");
@@ -157,14 +160,15 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
 
     private void getLocationForScan(View view) {
         LocationManager locationManager = (LocationManager) requireContext().getSystemService(Context.LOCATION_SERVICE);
+        loadingSave.setVisibility(View.VISIBLE);
         LocationListener locationListener = new LocationListener() {
             @Override
             public void onLocationChanged(@NonNull Location location) {
                 double latitude = location.getLatitude();
                 double longitude = location.getLongitude();
                 locationString = "latitude: " + latitude + ", longitude: " + longitude;
-                getCompanyFromUser(view);
                 locationManager.removeUpdates(this);
+                getCompanyFromUser(view);
             }
         };
         if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
@@ -211,9 +215,14 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
                     .addOnCompleteListener(new OnCompleteListener<Void>() {
                         @Override
                         public void onComplete(@NonNull Task<Void> task) {
-                            if (task.isSuccessful())
-                                Snackbar.make(view, "Scan saved successfully!", Snackbar.LENGTH_SHORT).setAnchorView((BottomNavigationView)getActivity().findViewById(R.id.bottomNavView)).show();
-                            else Snackbar.make(view, "A problem occured while saving the scan!", Snackbar.LENGTH_SHORT).setAnchorView((BottomNavigationView)getActivity().findViewById(R.id.bottomNavView)).show();
+                            if (task.isSuccessful()) {
+                                loadingSave.setVisibility(View.GONE);
+                                Snackbar.make(view, "Scan saved successfully!", Snackbar.LENGTH_SHORT).setAnchorView((BottomNavigationView) getActivity().findViewById(R.id.bottomNavView)).show();
+                            }
+                            else {
+                                loadingSave.setVisibility(View.GONE);
+                                Snackbar.make(view, "A problem occured while saving the scan!", Snackbar.LENGTH_SHORT).setAnchorView((BottomNavigationView)getActivity().findViewById(R.id.bottomNavView)).show();
+                            }
                         }
                     });
         }

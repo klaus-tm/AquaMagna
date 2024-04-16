@@ -59,7 +59,8 @@ public class MainActivity extends AppCompatActivity {
            }
        });
 
-       loadFragment(new HomeFragment(), true);
+       if (savedInstanceState == null)
+           loadFragment(new HomeFragment(), true);
     }
 
     private void loadFragment (Fragment fragment, boolean isAppInitialised){
