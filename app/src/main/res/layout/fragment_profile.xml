@@ -108,8 +108,7 @@
             android:layout_height="wrap_content"
             android:text="Delete Account"
             android:layout_marginTop="30dp"
-            android:textColor="@color/md_theme_dark_error"
-            app:rippleColor = "@color/md_theme_dark_onError"
+            android:theme="@style/ThemeOverlay.App.Button.Error"
             android:textSize="20sp"/>
     </LinearLayout>
 </ScrollView>

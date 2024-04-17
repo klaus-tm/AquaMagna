@@ -35,4 +35,9 @@
     </style>
 
     <style name="Theme.AquaMagnaInterface" parent="Base.Theme.AquaMagnaInterface" />
+    <style name="ThemeOverlay.App.Button.Error" parent="">
+        <item name="colorPrimary">@color/md_theme_light_error</item>
+        <item name="colorOnPrimary">@color/md_theme_light_onError</item>
+    </style>
+
 </resources>

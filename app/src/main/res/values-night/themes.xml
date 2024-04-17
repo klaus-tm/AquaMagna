@@ -32,5 +32,10 @@
         <item name="cardBackgroundColor">@color/md_theme_dark_secondaryContainer</item>
         <item name="android:textColor">@color/md_theme_dark_onSecondaryContainer</item>
     </style>
+    <style name="ThemeOverlay.App.Button.Error" parent="">
+        <item name="colorPrimary">@color/md_theme_dark_error</item>
+        <item name="colorOnPrimary">@color/md_theme_dark_onError</item>
+    </style>
+
 
 </resources>

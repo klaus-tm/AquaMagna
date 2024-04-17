@@ -275,7 +275,6 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
             public void run() {
                 mainText.setVisibility(View.GONE);
                 mainText.setText("");
-                messageText.setText("");
                 messageText.setVisibility(View.GONE);
                 buttons.setVisibility(View.GONE);
                 startScan.setVisibility(View.GONE);
