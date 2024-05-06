@@ -70,7 +70,6 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
     private DatabaseReference databaseReference;
     private DatabaseReference userReference;
     private static final String DATABASE_URL = "https://aquamagna-77b9d-default-rtdb.europe-west1.firebasedatabase.app/";
-
     private String locationString = "";
     private boolean isBluetoothSupported = false;
     private boolean arePermissionsGranted = false;
@@ -87,13 +86,10 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
     });
 
     private final ActivityResultLauncher<String[]> bluetoothPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), permissions -> {
-        // Check if all permissions are granted
         if (permissions.containsValue(false)) {
-            // Permission denied, handle accordingly (e.g., show a message to the user)
             mainText.setText("Grant location and nearby devices permissions in settings!");
             arePermissionsGranted = false;
         } else {
-            // All permissions granted, proceed with the logic
             arePermissionsGranted = true;
             if (!bluetoothAdapter.isEnabled()) {
                 Intent enableBTIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
@@ -104,6 +100,7 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
         }
         updateStartScanButtonVisibility();
     });
+
     private boolean isDark(Context context){
         int currentMode = context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
         return currentMode == UI_MODE_NIGHT_YES;
@@ -152,6 +149,7 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
         saveScan.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                buttons.setVisibility(View.GONE);
                 getLocationForScan(view);
             }
         });
@@ -171,12 +169,11 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
                 getCompanyFromUser(view);
             }
         };
+
         if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                 && ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // Permission is not granted, request it
             ActivityCompat.requestPermissions(requireActivity(), new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
         } else {
-            // Permission is granted, request location updates
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
         }
     }
@@ -217,6 +214,8 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
                         public void onComplete(@NonNull Task<Void> task) {
                             if (task.isSuccessful()) {
                                 loadingSave.setVisibility(View.GONE);
+                                buttons.setVisibility(View.VISIBLE);
+                                saveScan.setVisibility(View.GONE);
                                 Snackbar.make(view, "Scan saved successfully!", Snackbar.LENGTH_SHORT).setAnchorView((BottomNavigationView) getActivity().findViewById(R.id.bottomNavView)).show();
                             }
                             else {
@@ -228,12 +227,10 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
         }
     }
 
-
     @Override
     public void onResume() {
         super.onResume();
         if(!scanStarted){
-            // Check for permissions update here
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S){
                 if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(getContext(), Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED)
                     arePermissionsGranted = true;
@@ -259,6 +256,7 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
             }
         }
     }
+
     private void updateStartScanButtonVisibility() {
         if (isBluetoothSupported && arePermissionsGranted && isBluetoothEnabled) {
             startScan.setVisibility(View.VISIBLE);
@@ -297,10 +295,10 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
             @Override
             public void run() {
                 buttons.setVisibility(View.VISIBLE);
+                saveScan.setVisibility(View.VISIBLE);
                 messageText.setVisibility(View.VISIBLE);
             }
         });
-
     }
 
     @Override
@@ -313,22 +311,9 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
                 phText.setText("pH: " + deviceSensors.getPh().toString());
                 turbidityText.setText("Turbidity: " + deviceSensors.getTurbidity().toString());
                 conductivityText.setText("Conductivity: " + deviceSensors.getConductivity().toString());
-                float phThreshold = 7.0f;
-                float turbidityThreshold = 1.0f;
-                float conductivityThreshold = 800.0f;
+                float phThreshold = 7.5f;
 
-                // Check if the values are far from the standards
-                if (Math.abs(phThreshold - deviceSensors.getPh()) > 1.5f || Math.abs(deviceSensors.getTurbidity() - turbidityThreshold) > 10.0f || Math.abs(deviceSensors.getConductivity() - conductivityThreshold) > 100.0f) {
-                    // Values are far from the standards, set background color to dark red
-                    if (isDark(getContext())){
-                        setButtons(R.color.md_theme_dark_error, R.color.md_theme_dark_onError);
-                        setText("Don't drink it! :(", R.color.md_theme_dark_onErrorContainer, R.color.md_theme_dark_errorContainer);
-                    } else {
-                        setButtons(R.color.md_theme_light_error, R.color.md_theme_light_onError);
-                        setText("Don't drink it! :(", R.color.md_theme_light_onErrorContainer, R.color.md_theme_light_errorContainer);
-                    }
-                } else if (Math.abs(deviceSensors.getPh() - phThreshold) <= 0.1f && Math.abs(deviceSensors.getTurbidity() - turbidityThreshold) <= 5.0f && Math.abs(deviceSensors.getConductivity() - conductivityThreshold) <= 50.0f) {
-                    // Values are close to the standards, set background color to green
+                if (Math.abs(phThreshold - deviceSensors.getPh()) <= 1f && deviceSensors.getTurbidity() <= 1f && deviceSensors.getConductivity() <= 0.8f) {
                     if (isDark(getContext())){
                         setButtons(R.color.md_theme_dark_primary, R.color.md_theme_dark_onPrimary);
                         setText("Everything looks good! :)", R.color.md_theme_dark_onSurface, R.color.md_theme_dark_surface);
@@ -336,8 +321,15 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
                         setButtons(R.color.md_theme_light_primary, R.color.md_theme_light_onPrimary);
                         setText("Everything looks good! :)", R.color.md_theme_light_onSurface, R.color.md_theme_light_surface);
                     }
+                } else if (Math.abs(phThreshold - deviceSensors.getPh()) > 1.5f || deviceSensors.getTurbidity() > 5f || deviceSensors.getConductivity() > 2.5f) {
+                    if (isDark(getContext())){
+                        setButtons(R.color.md_theme_dark_error, R.color.md_theme_dark_onError);
+                        setText("Don't drink it! :(", R.color.md_theme_dark_onErrorContainer, R.color.md_theme_dark_errorContainer);
+                    } else {
+                        setButtons(R.color.md_theme_light_error, R.color.md_theme_light_onError);
+                        setText("Don't drink it! :(", R.color.md_theme_light_onErrorContainer, R.color.md_theme_light_errorContainer);
+                    }
                 } else {
-                    // Values are not far from the standards, set the text color to orange
                     if (isDark(getContext())){
                         setButtons(R.color.md_theme_dark_tertiary, R.color.md_theme_dark_onTertiary);
                         setText("Try to filtrate it before consuming! :/", R.color.md_theme_dark_onTertiaryContainer, R.color.md_theme_dark_tertiaryContainer);

@@ -15,6 +15,7 @@ import android.widget.Toast;
 import com.example.aquamagna.dataClasses.User;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+import com.google.android.material.progressindicator.CircularProgressIndicator;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
@@ -35,6 +36,7 @@ public class Login extends AppCompatActivity {
     private Button signIn;
     private Button signUp;
     private FirebaseAuth mAuth;
+    private CircularProgressIndicator progressIndicator;
     DatabaseReference databaseReference;
 
     @Override
@@ -42,6 +44,7 @@ public class Login extends AppCompatActivity {
         super.onStart();
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser != null){
+            progressIndicator.setVisibility(View.VISIBLE);
             searchUserInDatabase(currentUser.getUid(), getWindow().getDecorView().findViewById(android.R.id.content));
         }
     }
@@ -58,6 +61,7 @@ public class Login extends AppCompatActivity {
         passwordEditText = findViewById(R.id.passwordTextLogin);
         signIn = findViewById(R.id.signInLogin);
         signUp = findViewById(R.id.signUpLogin);
+        progressIndicator = findViewById(R.id.loadingLogin);
         emailEditText.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
@@ -100,6 +104,7 @@ public class Login extends AppCompatActivity {
 
                 String email = emailEditText.getText().toString();
                 String password = passwordEditText.getText().toString();
+                progressIndicator.setVisibility(View.VISIBLE);
                 searchUserInAuth(email, password, view);
             }
         });
@@ -116,6 +121,7 @@ public class Login extends AppCompatActivity {
                             searchUserInDatabase(user.getUid(), view);
                         } else {
                             // If sign in fails, display a message to the user.
+                            progressIndicator.setVisibility(View.GONE);
                             Snackbar.make(view, "There has been a problem!", Snackbar.LENGTH_SHORT).show();
                         }
                     }
@@ -129,15 +135,21 @@ public class Login extends AppCompatActivity {
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 User user = snapshot.getValue(User.class);
                 if (user != null){
+                    progressIndicator.setVisibility(View.GONE);
                     Toast.makeText(Login.this, "Welcome " + user.getName() + "!", Toast.LENGTH_SHORT).show();
                     Intent intent = new Intent(getApplicationContext(), MainActivity.class);
                     startActivity(intent);
                     finish();
                 }
+                else {
+                    progressIndicator.setVisibility(View.GONE);
+                    Snackbar.make(view, "This user does not exists!", Snackbar.LENGTH_SHORT).show();
+                }
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
+                progressIndicator.setVisibility(View.GONE);
                 Snackbar.make(view, "There has been a problem!", Snackbar.LENGTH_SHORT).show();
             }
         });

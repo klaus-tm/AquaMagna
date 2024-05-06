@@ -12,7 +12,6 @@
         android:layout_height="wrap_content"
         app:cardCornerRadius="10dp"
         android:elevation="10dp"
-        style="@style/Base.Theme.AquaMagnaInterface"
         android:id="@+id/list_card">
 
         <androidx.constraintlayout.widget.ConstraintLayout
