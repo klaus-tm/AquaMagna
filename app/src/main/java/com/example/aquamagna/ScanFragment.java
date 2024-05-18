@@ -15,6 +15,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -164,7 +165,7 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
             public void onLocationChanged(@NonNull Location location) {
                 double latitude = location.getLatitude();
                 double longitude = location.getLongitude();
-                locationString = "latitude: " + latitude + ", longitude: " + longitude;
+                locationString = latitude + "," + longitude;
                 locationManager.removeUpdates(this);
                 getCompanyFromUser(view);
             }
@@ -179,14 +180,13 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
     }
 
     private void getCompanyFromUser(View view) {
-        String company = "";
         userReference = FirebaseDatabase.getInstance(DATABASE_URL).getReference("users").child(auth.getUid());
         userReference.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 User user = snapshot.getValue(User.class);
                 if (user != null) {
-                    company.concat(user.getCompany());
+                    String company = user.getCompany();
                     saveScanToDatabase(view, company);
                 }
             }
@@ -208,7 +208,7 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
             Date today = new Date();
             SimpleDateFormat dateFormat = new SimpleDateFormat("d MMM yyyy, HH:mm:ss", Locale.getDefault());
             databaseReference.child(saveId)
-                    .setValue(new ScanData(saveId, dateFormat.format(today), locationString, auth.getCurrentUser().getUid(), company, ph[1].trim(), turbidity[1].trim(), conductivity[1].trim()))
+                    .setValue(new ScanData(dateFormat.format(today), locationString, auth.getCurrentUser().getUid(), company, ph[1].trim(), turbidity[1].trim(), conductivity[1].trim()))
                     .addOnCompleteListener(new OnCompleteListener<Void>() {
                         @Override
                         public void onComplete(@NonNull Task<Void> task) {

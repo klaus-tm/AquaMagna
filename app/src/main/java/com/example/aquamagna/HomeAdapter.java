@@ -54,12 +54,9 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
         holder.turbidityRow.setText("Turbidity: " + scanData.getTurbidity());
         holder.conductivityRow.setText("Conductivity: " + scanData.getConductivity());
 
-        String[] parts = scanData.getLocation().split(", ");
-        String latitudeString = parts[0].split(": ")[1];
-        String longitudeString = parts[1].split(": ")[1];
-
-        float latitude = Float.parseFloat(latitudeString);
-        float longitude = Float.parseFloat(longitudeString);
+        String[] parts = scanData.getLocation().split(",");
+        float latitude = Float.parseFloat(parts[0].trim());
+        float longitude = Float.parseFloat(parts[1].trim());
 
         String adress = getAddressFromCoordinates(context, latitude, longitude);
         holder.addressRow.setText(adress);

@@ -1,12 +1,11 @@
 package com.example.aquamagna.dataClasses;
 
 public class ScanData {
-    private String id, date, location, user, company, ph, turbidity, conductivity;
+    private String date, location, user, company, ph, turbidity, conductivity;
 
     public ScanData() {}
 
-    public ScanData(String id, String date, String location, String user, String company, String ph, String turbidity, String conductivity) {
-        this.id = id;
+    public ScanData(String date, String location, String user, String company, String ph, String turbidity, String conductivity) {
         this.date = date;
         this.location = location;
         this.user = user;
@@ -14,14 +13,6 @@ public class ScanData {
         this.ph = ph;
         this.turbidity = turbidity;
         this.conductivity = conductivity;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getId() {
-        return id;
     }
 
     public String getDate() {
