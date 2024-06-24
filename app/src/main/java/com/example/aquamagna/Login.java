@@ -29,7 +29,6 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 public class Login extends AppCompatActivity {
-
     private TextInputEditText emailEditText;
     private TextInputLayout emailInputLayout;
     private TextInputEditText passwordEditText;
@@ -39,6 +38,10 @@ public class Login extends AppCompatActivity {
     private CircularProgressIndicator progressIndicator;
     DatabaseReference databaseReference;
 
+    /**
+     * startup method which checks if an ongoing Auth instance exists.
+     * If yes, searchUserInDatabase is called in order to navigate to the MainActivity
+     */
     @Override
     protected void onStart() {
         super.onStart();
@@ -49,6 +52,10 @@ public class Login extends AppCompatActivity {
         }
     }
 
+    /**
+     * main method which creates all the objects and UI elements
+     * @param savedInstanceState - used to get the state of the instance when the user exits the app or it is rotated
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -62,54 +69,83 @@ public class Login extends AppCompatActivity {
         signIn = findViewById(R.id.signInLogin);
         signUp = findViewById(R.id.signUpLogin);
         progressIndicator = findViewById(R.id.loadingLogin);
+
         emailEditText.addTextChangedListener(new TextWatcher() {
+            /**
+             * initial state of the email text field without errors
+             * @param charSequence
+             * @param i
+             * @param i1
+             * @param i2
+             */
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
                 emailInputLayout.setError(null);
             }
 
+            /**
+             * check if the email text field has an actual email address
+             * @param charSequence - actual char which gets analyzed
+             * @param i
+             * @param i1
+             * @param i2
+             */
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
                 boolean isValidEmail = Patterns.EMAIL_ADDRESS.matcher(charSequence).matches();
                 if (!isValidEmail) {
                     emailInputLayout.setError("Invalid email address!");
                 } else if(charSequence.toString().isEmpty()){
-                    emailInputLayout.setError(null); // Clear the error message
-                } else emailInputLayout.setError(null); // Clear the error message
+                    emailInputLayout.setError(null);
+                } else emailInputLayout.setError(null);
             }
 
+            /**
+             * leave it empty
+             * @param editable
+             */
             @Override
             public void afterTextChanged(Editable editable) {
             }
         });
-        signUp.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(Login.this, Register.class);
-                startActivity(intent);
-                finish();
-            }
-        });
-        signIn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (emailEditText.getText().toString().isEmpty()){
-                    Snackbar.make(view, "Enter an email!", Snackbar.LENGTH_SHORT).show();
-                    return;
-                }
-                if (passwordEditText.getText().toString().isEmpty()){
-                    Snackbar.make(view, "Enter a password!", Snackbar.LENGTH_SHORT).show();
-                    return;
-                }
 
-                String email = emailEditText.getText().toString();
-                String password = passwordEditText.getText().toString();
-                progressIndicator.setVisibility(View.VISIBLE);
-                searchUserInAuth(email, password, view);
+        /**
+         * handler which navigates the user to the SignUp activity by Intent
+         */
+        signUp.setOnClickListener(view -> {
+            Intent intent = new Intent(Login.this, Register.class);
+            startActivity(intent);
+            finish();
+        });
+
+        /**
+         * handler which gets the email and password and sends them to the searchUserInAuth method
+         */
+        signIn.setOnClickListener(view -> {
+            if (emailEditText.getText().toString().isEmpty()){
+                Snackbar.make(view, "Enter an email!", Snackbar.LENGTH_SHORT).show();
+                return;
             }
+            if (passwordEditText.getText().toString().isEmpty()){
+                Snackbar.make(view, "Enter a password!", Snackbar.LENGTH_SHORT).show();
+                return;
+            }
+
+            String email = emailEditText.getText().toString();
+            String password = passwordEditText.getText().toString();
+            progressIndicator.setVisibility(View.VISIBLE);
+            searchUserInAuth(email, password, view);
         });
     }
 
+    /**
+     * Method which searches if the user account exists with the received credentials.
+     * If yes, the method searchUserInDatabase is called with the user UID from Auth.
+     * If not, a Snack-bar is displayed with an error message.
+     * @param email
+     * @param password
+     * @param view
+     */
     private void searchUserInAuth(String email, String password, View view) {
         mAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(new OnCompleteListener<AuthResult>() {
@@ -128,6 +164,13 @@ public class Login extends AppCompatActivity {
                 });
     }
 
+    /**
+     * Method which searches the user with the provided UID in the database reference using the provided link.
+     * When the user gets found an Intent is created to the MainActivity and a welcome Toast message is displayed with the user name
+     * If any problem persists, a Snack-bar is displayed.
+     * @param uid
+     * @param view
+     */
     private void searchUserInDatabase(String uid, View view) {
         databaseReference = FirebaseDatabase.getInstance("https://aquamagna-77b9d-default-rtdb.europe-west1.firebasedatabase.app/").getReference("users").child(uid);
         databaseReference.addListenerForSingleValueEvent(new ValueEventListener() {

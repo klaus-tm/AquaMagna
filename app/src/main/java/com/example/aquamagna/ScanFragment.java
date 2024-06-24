@@ -76,6 +76,10 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
     private boolean arePermissionsGranted = false;
     private boolean isBluetoothEnabled = false;
 
+    /**
+     * callback which checks if the bluetooth got turned on and set isBluetoothEnabled to true
+     * if not modify the first text and set isBluetoothEnabled to false
+     */
     private final ActivityResultLauncher<Intent> startBluetoothIntentForResult = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
         if (result.getResultCode() != Activity.RESULT_OK){
             isBluetoothEnabled = false;
@@ -86,6 +90,10 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
         updateStartScanButtonVisibility();
     });
 
+    /**
+     * callback used to check if the location and bluetooth permissions are approved.
+     * if not, set the arePermissionsGranted to false and modify the first text
+     */
     private final ActivityResultLauncher<String[]> bluetoothPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), permissions -> {
         if (permissions.containsValue(false)) {
             mainText.setText("Grant location and nearby devices permissions in settings!");
@@ -102,11 +110,28 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
         updateStartScanButtonVisibility();
     });
 
+    /**
+     * method used to check if the device theme is dark. Used for different colo schemes of the UI elements
+     * @param context
+     * @return true or false if the dark mode is enabled
+     */
     private boolean isDark(Context context){
         int currentMode = context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
         return currentMode == UI_MODE_NIGHT_YES;
     }
 
+    /**
+     * main method which creates the fragment view, objects and UI elements
+     * @param inflater The LayoutInflater object that can be used to inflate
+     * any views in the fragment,
+     * @param container If non-null, this is the parent view that the fragment's
+     * UI should be attached to.  The fragment should not add the view itself,
+     * but this can be used to generate the LayoutParams of the view.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed
+     * from a previous saved state as given here.
+     *
+     * @return view To be used in the hierarchy if other fragments will come on top
+     */
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_scan, container, false);
@@ -132,6 +157,9 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
         }
         BLEReceiveManager bleReceiveManager = new BLEReceiveManager(getContext(), getActivity(), this);
 
+        /**
+         * handler for the start scan button. It calls the startScanning method from the BLEReceiveManager
+         */
         startScan.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -140,6 +168,9 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
             }
         });
 
+        /**
+         * handler for the scan again button. It calls the startScanning method from the BLEReceiveManager
+         */
         newScan.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -147,6 +178,9 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
             }
         });
 
+        /**
+         * handler for the save scan button. It calls getLocationForScan method to begin the save procedure
+         */
         saveScan.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -157,6 +191,11 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
         return view;
     }
 
+    /**
+     * method which gets the location of the device using location manager.
+     * It creates a string with the latitude and longitude and calls getCompanyFromUser method
+     * @param view
+     */
     private void getLocationForScan(View view) {
         LocationManager locationManager = (LocationManager) requireContext().getSystemService(Context.LOCATION_SERVICE);
         loadingSave.setVisibility(View.VISIBLE);
@@ -179,6 +218,12 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
         }
     }
 
+    /**
+     * method which gets the company name from the user data in the database. Required for the ScanData object.
+     * If the task is successful, it calls saveScanToDatabase.
+     * If the task is not successful it displays an error Snack-bar
+     * @param view
+     */
     private void getCompanyFromUser(View view) {
         userReference = FirebaseDatabase.getInstance(DATABASE_URL).getReference("users").child(auth.getUid());
         userReference.addListenerForSingleValueEvent(new ValueEventListener() {
@@ -198,6 +243,13 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
         });
     }
 
+    /**
+     * method which saves the scan to the database. It gets the values of the parameters from the text-views, creates the ScanData object and saves into the database.
+     * if the task is successful it shows a confirm snack-bar
+     * if the task is not successful, it shows an error snack-bar
+     * @param view
+     * @param company
+     */
     private void saveScanToDatabase(View view, String company) {
         String[] ph = phText.getText().toString().split(":");
         String[] turbidity = turbidityText.getText().toString().split(":");
@@ -227,6 +279,10 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
         }
     }
 
+    /**
+     * method called by default when the user exits and returns to the app.
+     * it checks if the permissions gor accepted in the app settings
+     */
     @Override
     public void onResume() {
         super.onResume();
@@ -243,6 +299,10 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
         }
     }
 
+    /**
+     * method which calls the permissions to be accepted (location and bluetooth)
+     * it should be renamed showPermissionsDialog
+     */
     public void showBluetoothDialog() {
         if (bluetoothAdapter == null){
             mainText.setText("Device doesn't support Bluetooth :(");
@@ -257,6 +317,9 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
         }
     }
 
+    /**
+     * method which modifies the visibility of the start scan button based on the permissions
+     */
     private void updateStartScanButtonVisibility() {
         if (isBluetoothSupported && arePermissionsGranted && isBluetoothEnabled) {
             startScan.setVisibility(View.VISIBLE);
@@ -266,6 +329,15 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
         }
     }
 
+    /**
+     * override from the bleCallbacks interface
+     * it is called by the bleReceivedManager when the scan starts
+     * it hides the main text and start scan button
+     * it shows the text-views for the parameters and their standards
+     * it sets the scan again and save scan to gone (it is necessary when the scan is repeated)
+     * IT MUST RUN ON A SINGLE THREAD TO NOT CRASH THE APP. IT IS A SINGLE TASK AND IT MUST NOT START MULTIPLE TIMES
+     * @param activity
+     */
     @Override
     public void onScanStarted(Activity activity) {
         activity.runOnUiThread(new Runnable() {
@@ -289,6 +361,14 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
         });
     }
 
+    /**
+     * override from the bleCallbacks interface
+     * it is called by the bleReceivedManager when the scan stops
+     * it makes the save scan and scan again buttons visible
+     * it makes the result text visible
+     * IT MUST RUN ON A SINGLE THREAD TO NOT CRASH THE APP. IT IS A SINGLE TASK AND IT MUST NOT START MULTIPLE TIMES
+     * @param activity
+     */
     @Override
     public void onScanStopped(Activity activity) {
         activity.runOnUiThread(new Runnable() {
@@ -301,6 +381,15 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
         });
     }
 
+    /**
+     * override from the bleCallbacks interface
+     * it is called by the bleReceivedManager each time the gatt receives a message from the server
+     * it shows the device sensors values in the UI
+     * it puts the values between the standards and calls for the ui changes based on the device theme
+     * IT MUST RUN ON A SINGLE THREAD TO NOT CRASH THE APP. IT IS A SINGLE TASK AND IT MUST NOT START MULTIPLE TIMES
+     * @param deviceSensors
+     * @param activity
+     */
     @Override
     public void onDataFlow(DeviceSensors deviceSensors, Activity activity) {
         if (!isAdded())
@@ -342,17 +431,33 @@ public class ScanFragment extends Fragment implements BLEReceiveManager.BLECallb
         });
     }
 
+    /**
+     * override from the bleCallbacks interface
+     * it is called when the connection to the server is terminated
+     * it show a confirmation snack-bar on the screen
+     */
     @Override
     public void showSnackbar() {
         Snackbar.make((CoordinatorLayout)getActivity().findViewById(R.id.coordinator), "Scan finished successfully!", Snackbar.LENGTH_SHORT).setAnchorView((BottomNavigationView)getActivity().findViewById(R.id.bottomNavView)).show();
     }
 
+    /**
+     * method used by the onDataFlow callback to change the color of the buttons and button text
+     * @param colorButton
+     * @param colorText
+     */
     private void setButtons(int colorButton, int colorText) {
         saveScan.setBackgroundColor(getResources().getColor(colorButton));
         saveScan.setTextColor(getResources().getColor(colorText));
         newScan.setTextColor(getResources().getColor(colorButton));
     }
 
+    /**
+     * method used by onDataFlow callback to change the color of the card and the text within the card
+     * @param message
+     * @param colorText
+     * @param colorContainer
+     */
     private void setText(String message, int colorText, int colorContainer) {
         messageText.setText(message);
         messageText.setTextColor(getResources().getColor(colorText));

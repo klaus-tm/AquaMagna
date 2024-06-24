@@ -35,6 +35,19 @@ public class HomeFragment extends Fragment {
     private FirebaseAuth auth;
     private DatabaseReference databaseReference;
     private static final String DATABASE_URL = "https://aquamagna-77b9d-default-rtdb.europe-west1.firebasedatabase.app/";
+
+    /**
+     * main method which creates the fragment view, objects and UI elements
+     * @param inflater The LayoutInflater object that can be used to inflate
+     * any views in the fragment,
+     * @param container If non-null, this is the parent view that the fragment's
+     * UI should be attached to.  The fragment should not add the view itself,
+     * but this can be used to generate the LayoutParams of the view.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed
+     * from a previous saved state as given here.
+     *
+     * @return view To be used in the hierarchy if other fragments will come on top
+     */
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_home, container, false);
@@ -52,6 +65,11 @@ public class HomeFragment extends Fragment {
         return view;
     }
 
+    /**
+     * method which gets the scans from the database for the current user and flips it.
+     * After that it populates the recycler view adapter
+     * @param view
+     */
     private void getScanHistory(View view) {
         databaseReference = FirebaseDatabase.getInstance(DATABASE_URL).getReference("scans");
         databaseReference.addListenerForSingleValueEvent(new ValueEventListener() {
@@ -76,6 +94,9 @@ public class HomeFragment extends Fragment {
 
     }
 
+    /**
+     * Method which pulates the welcome message of the fragment with the name of the logged user
+     */
     private void setWelcomeMessage() {
         databaseReference = FirebaseDatabase.getInstance(DATABASE_URL).getReference("users").child(auth.getUid());
         databaseReference.addListenerForSingleValueEvent(new ValueEventListener() {

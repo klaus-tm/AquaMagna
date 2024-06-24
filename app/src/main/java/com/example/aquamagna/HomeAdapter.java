@@ -32,11 +32,24 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
     private List<ScanData> scanDataList;
     private Context context;
 
+    /**
+     * constructor of the adapter. Gets scan data and context of the fragment
+     * @param scanDataList
+     * @param context
+     */
     HomeAdapter(List<ScanData> scanDataList, Context context){
         this.scanDataList = scanDataList;
         this.context = context;
     }
 
+    /**
+     * Method which sets up what layout element is used to populate the recycler view
+     * @param parent The ViewGroup into which the new View will be added after it is bound to
+     *               an adapter position.
+     * @param viewType The view type of the new View.
+     *
+     * @return
+     */
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -44,6 +57,12 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
         return new ViewHolder(view);
     }
 
+    /**
+     * Method which populates the elements from the layout element used in the recycler view
+     * @param holder The ViewHolder which should be updated to represent the contents of the
+     *        item at the given position in the data set.
+     * @param position The position of the item within the adapter's data set.
+     */
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         ScanData scanData = scanDataList.get(position);
@@ -63,6 +82,10 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
 
         checkValues(scanData, holder);
         holder.cardView.setOnClickListener(new View.OnClickListener() {
+            /**
+             * Handler for the card press. It spawns the warning where the app will go to Google Maps
+             * @param view
+             */
             @Override
             public void onClick(View view) {
                 MaterialAlertDialogBuilder materialAlertDialogBuilder = new MaterialAlertDialogBuilder(context);
@@ -83,6 +106,13 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
         });
     }
 
+    /**
+     * Method which gets the address name and number using a geocoder for the latitude and longitude provided
+     * @param context
+     * @param latitude
+     * @param longitude
+     * @return
+     */
     private String getAddressFromCoordinates(Context context, float latitude, float longitude) {
         Geocoder geocoder = new Geocoder(context, Locale.getDefault());
         String addressString = "";
@@ -100,11 +130,21 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
         return addressString;
     }
 
+    /**
+     * method used to check if the device theme is dark. Used for different colo schemes of the UI elements
+     * @param context
+     * @return true or false if the dark mode is enabled
+     */
     private boolean isDark(Context context){
         int currentMode = context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
         return currentMode == UI_MODE_NIGHT_YES;
     }
 
+    /**
+     * method used to put the scan data between the global standards and dictate the color scheme for the UI elements
+     * @param scanData
+     * @param holder
+     */
     private void checkValues(ScanData scanData, ViewHolder holder) {
         float phThreshold = 7.5f;
 
@@ -129,6 +169,12 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
         }
     }
 
+    /**
+     * method which gives the layout elements color based on the standard color scheme shown before
+     * @param holder
+     * @param colorTextID
+     * @param colorContainerID
+     */
     private void setCard(ViewHolder holder, int colorTextID, int colorContainerID) {
         int colorText = ContextCompat.getColor(holder.itemView.getContext(), colorTextID);
         int colorContainer = ContextCompat.getColor(holder.itemView.getContext(), colorContainerID);
@@ -142,11 +188,18 @@ public class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.ViewHolder> {
         holder.cardView.setCardBackgroundColor(colorContainer);
     }
 
+    /**
+     * method which returns how many layout elements need to be created in the recycler view
+     * @return
+     */
     @Override
     public int getItemCount() {
         return scanDataList.size();
     }
 
+    /**
+     * class which gets the UI elements of the layout used to populate recycler view,in order to be used to insert the data from the received list
+     */
     public class ViewHolder extends RecyclerView.ViewHolder {
         TextView addressRow;
         TextView dateRow;

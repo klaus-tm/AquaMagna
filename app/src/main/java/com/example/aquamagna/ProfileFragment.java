@@ -1,5 +1,6 @@
 package com.example.aquamagna;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 
@@ -20,6 +21,7 @@ import com.example.aquamagna.dataClasses.User;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputEditText;
@@ -43,6 +45,18 @@ public class ProfileFragment extends Fragment {
     private FirebaseAuth auth;
     private DatabaseReference databaseReference;
 
+    /**
+     * main method which creates the fragment view, objects and UI elements
+     * @param inflater The LayoutInflater object that can be used to inflate
+     * any views in the fragment,
+     * @param container If non-null, this is the parent view that the fragment's
+     * UI should be attached to.  The fragment should not add the view itself,
+     * but this can be used to generate the LayoutParams of the view.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed
+     * from a previous saved state as given here.
+     *
+     * @return view To be used in the hierarchy if other fragments will come on top
+     */
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_profile, container, false);
@@ -61,44 +75,61 @@ public class ProfileFragment extends Fragment {
         setInfo(auth.getCurrentUser().getUid(), view);
         populateCompanyNames();
 
-        signOut.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                auth.signOut();
-                Toast.makeText(getContext(), "See you next time!", Toast.LENGTH_SHORT).show();
-                Intent intent = new Intent(getContext(), Login.class);
-                startActivity(intent);
-                getActivity().finish();
+        signOut.setOnClickListener(view1 -> {
+            auth.signOut();
+            Toast.makeText(getContext(), "See you next time!", Toast.LENGTH_SHORT).show();
+            Intent intent = new Intent(getContext(), Login.class);
+            startActivity(intent);
+            getActivity().finish();
+        });
+
+        /**
+         * handler for the data saving in the database and Auth
+         */
+        save.setOnClickListener(view2 -> {
+            databaseReference = FirebaseDatabase.getInstance(DATABASE_URL).getReference("users").child(auth.getCurrentUser().getUid());
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                User newUser = new User(name.getText().toString(), email.getText().toString(), phone.getText().toString(),company.getEditText().getText().toString());
+                databaseReference.setValue(newUser)
+                        .addOnCompleteListener(new OnCompleteListener<Void>() {
+                            @Override
+                            public void onComplete(@NonNull Task<Void> task) {
+                                if (task.isSuccessful()){
+                                    Snackbar.make((CoordinatorLayout)getActivity().findViewById(R.id.coordinator), "Details saved successfully!", Snackbar.LENGTH_SHORT).setAnchorView((BottomNavigationView)getActivity().findViewById(R.id.bottomNavView)).show();
+                                }
+                            }
+                        });
             }
         });
-        save.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                databaseReference = FirebaseDatabase.getInstance(DATABASE_URL).getReference("users").child(auth.getCurrentUser().getUid());
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                    User newUser = new User(name.getText().toString(), email.getText().toString(), phone.getText().toString(),company.getEditText().getText().toString());
-                    databaseReference.setValue(newUser)
-                            .addOnCompleteListener(new OnCompleteListener<Void>() {
+
+        /**
+         * handler which deletes the user from Auth and database
+         */
+        delete.setOnClickListener(view3 -> {
+            MaterialAlertDialogBuilder materialAlertDialogBuilder = new MaterialAlertDialogBuilder(requireContext());
+            materialAlertDialogBuilder.setTitle("Account deletion")
+                            .setIcon(R.drawable.person_delete)
+                            .setMessage("Warning! Deleting the account is an irreversible action. Do you wish to continue?")
+                            .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                                 @Override
-                                public void onComplete(@NonNull Task<Void> task) {
-                                    if (task.isSuccessful()){
-                                        Snackbar.make((CoordinatorLayout)getActivity().findViewById(R.id.coordinator), "Details saved successfully!", Snackbar.LENGTH_SHORT).setAnchorView((BottomNavigationView)getActivity().findViewById(R.id.bottomNavView)).show();
-                                    }
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    deleteUserFromDatabase(view3);
+                                }
+                            })
+                            .setNeutralButton("Cancel", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
                                 }
                             });
-                }
-            }
-        });
-        delete.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                deleteUserFromDatabase(view);
-            }
+            materialAlertDialogBuilder.show();
         });
 
         return view;
     }
 
+    /**
+     * method used to get the companies registered and populate the autocomplete view
+     */
     private void populateCompanyNames(){
         databaseReference = FirebaseDatabase.getInstance(DATABASE_URL).getReference("companies");
         databaseReference.addListenerForSingleValueEvent(new ValueEventListener() {
@@ -122,6 +153,12 @@ public class ProfileFragment extends Fragment {
         });
     }
 
+    /**
+     * method which deletes the user from Auth.
+     * If the task is successful, it navigates to the login activity and displays a goodbye toast message
+     * If the task is not successful, it displays an error snack-bar
+     * @param view
+     */
     private void deleteUserFromAuth(View view) {
         if (auth.getCurrentUser().getUid() != null){
             auth.getCurrentUser().delete()
@@ -140,6 +177,12 @@ public class ProfileFragment extends Fragment {
         }
     }
 
+    /**
+     * method which deletes the data stored about the user in the database
+     * If the task is successful, it calls deleteUserFromAuth
+     * If the task is not successful, it displays an error snack-bar
+     * @param view
+     */
     private void deleteUserFromDatabase(View view) {
         databaseReference = FirebaseDatabase.getInstance(DATABASE_URL).getReference("users").child(auth.getCurrentUser().getUid());
         databaseReference.removeValue()
@@ -151,6 +194,11 @@ public class ProfileFragment extends Fragment {
                 });
     }
 
+    /**
+     * method which gets the data stored about the usr and populates the UI elements
+     * @param uid
+     * @param view
+     */
     private void setInfo(String uid, View view) {
         databaseReference = FirebaseDatabase.getInstance(DATABASE_URL).getReference("users").child(uid);
         databaseReference.addListenerForSingleValueEvent(new ValueEventListener() {

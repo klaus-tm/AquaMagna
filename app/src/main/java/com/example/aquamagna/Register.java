@@ -38,6 +38,10 @@ public class Register extends AppCompatActivity {
     FirebaseDatabase database;
     DatabaseReference databaseReference;
 
+    /**
+     * startup method which checks if an ongoing Auth instance exists.
+     * If yes, searchUserInDatabase is called in order to navigate to the MainActivity
+     */
     @Override
     protected void onStart() {
         super.onStart();
@@ -47,6 +51,10 @@ public class Register extends AppCompatActivity {
         }
     }
 
+    /**
+     * main method which creates all the objects and UI elements
+     * @param savedInstanceState - used to get the state of the instance when the user exits the app or it is rotated
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -62,32 +70,56 @@ public class Register extends AppCompatActivity {
         signUp = findViewById(R.id.signUpRegister);
 
         emailEditText.addTextChangedListener(new TextWatcher() {
+            /**
+             * initial state of the email text field without errors
+             * @param charSequence
+             * @param i
+             * @param i1
+             * @param i2
+             */
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
                 emailInputLayout.setError(null);
             }
 
+            /**
+             * check if the email text field has an actual email address
+             * @param charSequence - actual char which gets analyzed
+             * @param i
+             * @param i1
+             * @param i2
+             */
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
                 boolean isValidEmail = Patterns.EMAIL_ADDRESS.matcher(charSequence).matches();
                 if (!isValidEmail) {
                     emailInputLayout.setError("Invalid email address!");
                 } else if(charSequence.toString().isEmpty()){
-                    emailInputLayout.setError(null); // Clear the error message
-                } else emailInputLayout.setError(null); // Clear the error message
+                    emailInputLayout.setError(null);
+                } else emailInputLayout.setError(null);
             }
 
+            /**
+             * leave it empty
+             * @param editable
+             */
             @Override
             public void afterTextChanged(Editable editable) {
             }
         });
 
+        /**
+         * handler which navigates the user to the SignIp activity by Intent
+         */
         signIn.setOnClickListener(view -> {
             Intent intent = new Intent(getApplicationContext(), Login.class);
             startActivity(intent);
             finish();
         });
 
+        /**
+         * handler which gets the name, email and password and sends them to the saveUserToAuth method
+         */
         signUp.setOnClickListener(view -> {
             if (nameEditText.getText().toString().isEmpty()){
                 Snackbar.make(view, "Enter a name!", Snackbar.LENGTH_SHORT).show();
@@ -109,6 +141,15 @@ public class Register extends AppCompatActivity {
         });
     }
 
+    /**
+     * Method which creates an account in Auth using the email and password parameters.
+     * When the message received is affirmative the method calls saveUserToDatabase.
+     * When the message received is negative, an error Snack-bar is displayed.
+     * @param name
+     * @param email
+     * @param password
+     * @param view
+     */
     private void saveUserToAuth(String name, String email, String password, View view) {
         mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(new OnCompleteListener<AuthResult>() {
@@ -127,6 +168,15 @@ public class Register extends AppCompatActivity {
                 });
     }
 
+    /**
+     * Method which saves the user in the database using the reference and the user UID, email and name. It creates an User object and saves it to the child with the UID
+     * When the message received is affirmative the method navigates the user to the MainActivity using Intent and displays a welcome Toast message.
+     * When the message received is negative, an error Snack-bar is displayed.
+     * @param uid
+     * @param email
+     * @param name
+     * @param view
+     */
     private void saveUserToDatabase(String uid, String email, String name, View view) {
         database = FirebaseDatabase.getInstance("https://aquamagna-77b9d-default-rtdb.europe-west1.firebasedatabase.app/");
         databaseReference = database.getReference("users");
@@ -147,6 +197,14 @@ public class Register extends AppCompatActivity {
                 });
     }
 
+    /**
+     * -USED ONLY BY onStart() METHOD-
+     * Method which searches the user with the provided UID in the database reference using the provided link.
+     * When the user gets found an Intent is created to the MainActivity and a welcome Toast message is displayed with the user name
+     * If any problem persists, a Snack-bar is displayed.
+     * @param uid
+     * @param view
+     */
     private void searchUserInDatabase(String uid, View view) {
         databaseReference = FirebaseDatabase.getInstance("https://aquamagna-77b9d-default-rtdb.europe-west1.firebasedatabase.app/").getReference("users").child(uid);
         databaseReference.addListenerForSingleValueEvent(new ValueEventListener() {

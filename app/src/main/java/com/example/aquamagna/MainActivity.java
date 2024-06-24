@@ -21,10 +21,14 @@ import com.google.firebase.auth.FirebaseAuth;
 
 public class MainActivity extends AppCompatActivity {
 
+    /**
+     * main method which creates all the objects and UI elements
+     * @param savedInstanceState - used to get the state of the instance when the user exits the app or it is rotated
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-       setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_main);
 
         FirebaseAuth auth = FirebaseAuth.getInstance();
         if (auth.getCurrentUser() == null){
@@ -39,6 +43,13 @@ public class MainActivity extends AppCompatActivity {
         FrameLayout frameLayout = findViewById(R.id.frameLayout);
 
        bottomNavigationView.setOnNavigationItemSelectedListener(new BottomNavigationView.OnNavigationItemSelectedListener() {
+
+           /**
+            * Handler for the bottom navigation bar button press.
+            * Each button is mapped to the correspondent fragment.
+            * @param item The selected item
+            * @return always true (every button press is intended)
+            */
            @Override
            public boolean onNavigationItemSelected(@NonNull MenuItem item) {
 
@@ -63,6 +74,13 @@ public class MainActivity extends AppCompatActivity {
            loadFragment(new HomeFragment(), true);
     }
 
+    /**
+     * Method which loads the fragments when any of the bottom navigation bar buttons is pressed.
+     * If the app is initialised (first start) the fragment received is added in the stack.
+     * If the app is not initialised (switch apps/rotate the screen) the fragment received replaces the startup fragment.
+     * @param fragment
+     * @param isAppInitialised
+     */
     private void loadFragment (Fragment fragment, boolean isAppInitialised){
         FragmentManager fragmentManager = getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();

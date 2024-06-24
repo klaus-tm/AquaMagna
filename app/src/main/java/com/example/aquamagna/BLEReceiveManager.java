@@ -24,17 +24,32 @@ import java.util.List;
 import java.util.UUID;
 @SuppressLint("MissingPermission")
 public class BLEReceiveManager {
+    //Lolin32 info (name, UUIDS)
     private static final String DEVICE_NAME = "ESP32";
     private static final UUID SERVICE_UUID = UUID.fromString("4fafc201-1fb5-459e-8fcc-c5c9c331914b");
     private static final UUID CHARACTERISTIC_UUID = UUID.fromString("beb5483e-36e1-4688-b7f5-ea07361b26a8");
     private static final UUID CCCD_DESCRIPTOR_UUID = UUID.fromString("00002902-0000-1000-8000-00805F9B34FB");
+
+    //delay handler set to 10s
     private Handler handler = new Handler(Looper.getMainLooper());
+
+    //information received from the fragment(adapter, context, activity-this is initialised with BluetoothManager to allow running on a single thread)
     private final BluetoothAdapter bluetoothAdapter;
     private final Context context;
+
+    //BLECallbacks interface object used for handling UI changes in the fragment
     private BLECallbacks bleCallbacks;
     private final Activity activity;
+
+    //responsable for handling the connection process with the Lolin32 board
     private BluetoothGatt bluetoothGatt;
+
+    //visible progress dialog for the connection procedure
     private ProgressDialog progressDialog;
+
+    /**
+     * disconnect handler when the connection ends after 10s
+     */
     private Runnable disconnectRunnable = new Runnable() {
         @Override
         public void run() {
@@ -48,6 +63,9 @@ public class BLEReceiveManager {
         }
     };
 
+    /**
+     * callback used when the scan process ends and checks if the device found is the same with DEVICE_NAME
+     */
     private ScanCallback scanCallback = new ScanCallback() {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
@@ -58,7 +76,16 @@ public class BLEReceiveManager {
         }
     };
 
+    /**
+     * callbacks of the gatt while creating the connection with the found device
+     */
     private BluetoothGattCallback gattCallback = new BluetoothGattCallback() {
+        /**
+         * callback used when the device gets connected and searches for the services
+         * @param gatt
+         * @param status
+         * @param newState
+         */
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
             if (newState == BluetoothGatt.STATE_CONNECTED) {
@@ -69,6 +96,11 @@ public class BLEReceiveManager {
             }
         }
 
+        /**
+         * callback used when the services get discovered and searches for characteristic and descriptor with the specified UUIDs
+         * @param gatt
+         * @param status
+         */
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
@@ -89,6 +121,12 @@ public class BLEReceiveManager {
             }
         }
 
+        /**
+         * callback used when the characteristic gets discovered.
+         * It also gets the data from the server and creates the DeviceSensors object to send them to the fragment using bleCallbacks.onDataFlow
+         * @param gatt
+         * @param characteristic
+         */
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
             // Handle characteristic changes here
@@ -114,6 +152,14 @@ public class BLEReceiveManager {
         }
     };
 
+    /**
+     * Class constructor.
+     * It requires fragment context, activity and callbacks.
+     * It initialises the adapter and the progress dialog
+     * @param context
+     * @param activity
+     * @param callbacks
+     */
     public BLEReceiveManager(Context context, Activity activity, BLECallbacks callbacks) {
         this.context = context;
         this.activity = activity;
@@ -132,6 +178,9 @@ public class BLEReceiveManager {
         this.bleCallbacks = callbacks;
     }
 
+    /**
+     * method to start the scan procedure followed by the scanCallback
+     */
     public void startScanning() {
         if (bluetoothAdapter != null) {
             progressDialog.show();
@@ -140,6 +189,9 @@ public class BLEReceiveManager {
         }
     }
 
+    /**
+     * method to stop the scan procedure after the device has been found
+     */
     public void stopScanning() {
         if (bluetoothAdapter != null) {
             progressDialog.dismiss();
@@ -148,6 +200,10 @@ public class BLEReceiveManager {
         }
     }
 
+    /**
+     * method which starts the connection procedure followed by data receive for 10 seconds
+     * @param device
+     */
     private void connectToDevice(final BluetoothDevice device) {
         if (bluetoothGatt != null) {
             bluetoothGatt.close();
@@ -156,6 +212,10 @@ public class BLEReceiveManager {
         handler.postDelayed(disconnectRunnable, 10000);
     }
 
+    /**
+     * method used to change the message of the progress dialog during the gatt callbacks
+     * @param message
+     */
     private void updateProgress(String message) {
         activity.runOnUiThread(new Runnable() {
             @Override
@@ -165,6 +225,9 @@ public class BLEReceiveManager {
         });
     }
 
+    /**
+     * interface used to modify the UI elements in the fragment
+     */
     public interface BLECallbacks{
         void onScanStarted(Activity activity);
         void onScanStopped(Activity activity);
