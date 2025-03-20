@@ -62,8 +62,7 @@ cd AquaMagna
 ### 2. Build the app
 1. Launch Android Studio **Hedgehog**
 2. Build Gradle and dependencies
-3. Run the project to your local phone
-4. [TODO] (provide apk releases)
+3. Run the project to your local phone  
 
 ### 4. Connect to Mobile App
 1. Create an account for history visualization
@@ -78,6 +77,7 @@ cd AquaMagna
 - [ ] Enhance **real-time graphing & analytics**
 - [ ] Implement **push notifications for critical alerts**
 - [ ] Bug fixing
+- [ ] Provide apk releases
 
 ## Known issues
 1. New thread emerging when exiting the app and when rotating the phone. It breaks the scan phase
